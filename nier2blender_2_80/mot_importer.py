@@ -62,15 +62,15 @@ def format_motion_data(frame_count, records):
 	return motions
 	
 def construct_action(mot, motion, armature, bind_pose, rotation_resample=False): #(mot.py MOT object,  motion from above, blender.data.armatures object, bind pose from below)
-	print('[+] importing motion %s' + mot.motionName)
+	print('[+] importing motion %s' % mot.motionName)
 	action = bpy.data.actions.new(name=mot.motionName)
 	action.use_fake_user = True
-	action.target_user = armature.name
+	#action.target_user = armature.name #%TODO% figure this out
 	if armature.animation_data is None:
 		armature.animation_data_create()
 	armature.animation_data.action = action
 	
-	bpy.context.scene.objects.active = armature 
+	bpy.context.view_layer.objects.active = armature 
 	bpy.ops.object.mode_set(mode='POSE') #Set armature to pose mode
 	bone_mapping = armature["bone_mapping"] #Get bones from armature
 	pose_bones = armature.pose.bones 
@@ -111,7 +111,7 @@ def construct_action(mot, motion, armature, bind_pose, rotation_resample=False):
 			for rot_value in rot_values:
 				frame = rot_value[0] + 1
 				quat = mathutils.Quaternion([rot_value[4], rot_value[1], rot_value[2], rot_value[3]]) # In blender, quaternion is stored in order of w, x, y, z
-				quat *= bind_pose[bone_name][1].inverted() #offset pose_bone rotation from normal pose
+				quat @= bind_pose[bone_name][1].inverted() #offset pose_bone rotation from normal pose
 				
 				if frame - prev_frame > 1 and rotation_resample: #option to have blender slerp the values
 					prev_quat = mathutils.Quaternion(pose_bone.rotation_quaternion)
@@ -171,12 +171,12 @@ def construct_action(mot, motion, armature, bind_pose, rotation_resample=False):
 #		if bone.parent is None:
 #			loc_mat = m @ bone.matrix
 #		else:
-#			loc_mat = (m @ bone.parent.matrix).inverted() *@ (m @ bone.matrix)
+#			loc_mat = (m @ bone.parent.matrix).inverted() @ (m @ bone.matrix)
 #		loc, rot, scale = loc_mat.decompose()
 #		bind_pose[bone.name] = (loc, rot, scale)
 #	return bind_pose
 	
-def calc_bind_pose_transform(armature): #%TODO% figure this out
+def calc_bind_pose_transform(armature): 
 	bind_pose = {}
 	for bone in armature.data.edit_bones:
 		loc, rot, scale = bone.matrix.decompose()
