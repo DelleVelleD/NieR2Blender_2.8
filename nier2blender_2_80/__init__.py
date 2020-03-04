@@ -32,6 +32,30 @@ class ImportNier2blender(bpy.types.Operator, ImportHelper):
             wmb_importer.reset_blend()
         return wmb_importer.main(self.filepath)
 
+class ImportMOTNier2blender(bpy.types.Operator, ImportHelper):
+    '''Load a Nier:Automata MOT File.'''
+    bl_idname = "import.mot_data"
+    bl_label = "Import MOT Data"
+    bl_options = {'PRESET'}
+    filename_ext = ".mot"
+    filter_glob: StringProperty(default="*.mot", options={'HIDDEN'})
+    
+    def execute(self, context):
+        armature = None
+        for obj in context.selected_objects:
+            if obj.get("bone_mapping"):
+                print('[MOT-Info] Selected obj: %s' % (obj.name))
+                armature = obj
+                break
+    
+        if armature is None:
+            print('[MOT-Error] context.selected_objects not found: bone_mapping')
+            self.report({'ERROR'}, "No armature is selected!")
+            return {'FINISHED'}
+            
+        from nier2blender_2_80 import mot_importer
+        return mot_importer.main(self.filepath, armature)
+
 class ImportDATNier2blender(bpy.types.Operator, ImportHelper):
     '''Load a Nier:Automata DTT (and DAT) File.'''
     bl_idname = "import.dtt_data"
@@ -103,18 +127,25 @@ def menu_func_import(self, context):
 
 def menu_func_import_dat(self, context):
     self.layout.operator(ImportDATNier2blender.bl_idname, text="DTT File for Nier:Automata (.dtt)")
+    
+def menu_func_import_mot(self, context):
+    self.layout.operator(ImportMOTNier2blender.bl_idname, text="MOT File for Nier:Automata (.mot)")
 
 def register():
     bpy.utils.register_class(ImportNier2blender)
     bpy.utils.register_class(ImportDATNier2blender)
+    bpy.utils.register_class(ImportMOTNier2blender)
     bpy.types.TOPBAR_MT_file_import.append(menu_func_import)
     bpy.types.TOPBAR_MT_file_import.append(menu_func_import_dat)
+    bpy.types.TOPBAR_MT_file_import.append(menu_func_import_mot)
 
 def unregister():
     bpy.utils.unregister_class(ImportNier2blender)
     bpy.utils.unregister_class(ImportDATNier2blender)
+    bpy.utils.unregister_class(ImportMOTNier2blender)
     bpy.types.TOPBAR_MT_file_import.remove(menu_func_import)
     bpy.types.TOPBAR_MT_file_import.remove(menu_func_import_dat)
+    bpy.types.TOPBAR_MT_file_import.remove(menu_func_import_mot)
 
 
 if __name__ == '__main__':
