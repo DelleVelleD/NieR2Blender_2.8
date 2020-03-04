@@ -21,108 +21,212 @@ class mot_record(object):
 			
 			
 	def get_frame(self, frameIndex):
-		if self.recordType == 0:
+		if self.recordType == 0: #Type 0 --------------------------------------
 			return self.final4
 		else:
 			values = self.values_header.values
-			if self.recordType == 1:
+			if self.recordType == 1: #Type 1 --------------------------------------
 				if(frameIndex < 0):
 					return values[0].p
 				elif(frameIndex > len(values)):
 					return values[-1].p
 				else:
 					return values[frameIndex].p
-			elif 2 <= self.recordType <= 3:
+			elif 2 <= self.recordType <= 3: #Type 2/3 --------------------------------------
 				if(frameIndex < 0):
 					return self.values_header.p + self.values_header.dp * values[0].cp
 				elif(frameIndex > len(values)):
 					return self.values_header.p + self.values_header.dp * values[-1].cp
 				else:
 					return self.values_header.p + self.values_header.dp * values[frameIndex].cp
-			elif self.recordType == 4:
-				if(frameIndex < 0):
+			elif self.recordType == 4: #Type 4 --------------------------------------
+				if(frameIndex <= values[0].frameIndex):
 					return values[0].p
-				elif(frameIndex > len(values)):
-					return values[-1].p
-				else:
-					for i in range(1, len(values)):
-						if(frameIndex == values[i-1].frameIndex):
-							return values[i-1].p
-						elif(frameIndex == values[i].frameIndex):
-							return values[i].p
-						elif(values[i-1].frameIndex < frameIndex < values[i].frameIndex):
-							p0 = values[i-1].p
-							m0 = values[i-1].m1
-							p1 = values[i].p
-							m1 = values[i].m0
-							t = 1.0 * (frameIndex-values[i-1].frameIndex)/(values[i].frameIndex - values[i-1].frameIndex)
-							val = (2*t*t*t - 3*t*t + 1)*p0 + (t*t*t - 2*t*t + t)*m0 + (-2*t*t*t + 3*t*t)*p1 + (t*t*t - t*t)*m1
-							return val
-						else:
-							print('[MOT-Error] Record frame outside bounds. boneNumber: %d, recordType: %d, frameIndex: %d, minBound: %d, maxBound: %d' % (self.bone_id, self.recordType, frameIndex, values[i-1].frameIndex, values[i].frameIndex))
-			elif 5 <= self.recordType <= 6:
-				if(frameIndex < 0):
+				if(frameIndex >= values[-1].frameIndex):
+					return values[-1].frameIndex
+				
+				p_i = 0
+				for i, value in enumerate(values):
+					if frameIndex < value.frameIndex:
+						p_i = i-1
+						break
+					if frameIndex == value.frameIndex:
+						return value.p
+				
+				k1 = values[p_i]
+				k2 = values[p_i + 1]
+				
+				p0 = k1.p
+				m0 = k1.m1
+				p1 = k2.p
+				m1 = k2.m0
+				t = 1.0 * (frameIndex - k1.frameIndex)/(k2.frameIndex - k1.frameIndex)
+				val = (2*t*t*t - 3*t*t + 1)*p0 + (t*t*t - 2*t*t + t)*m0 + (-2*t*t*t + 3*t*t)*p1 + (t*t*t - t*t)*m1
+				return val
+					
+				print('[MOT-Error] Record frame outside bounds. boneNumber: %d, recordType: %d, frameIndex: %d, minBound: %d, maxBound: %d' % (self.bone_id, self.recordType, frameIndex, k1.frameIndex, k2.frameIndex))
+			
+#				if(frameIndex < 0):
+#					return values[0].p
+#				elif(frameIndex > len(values)):
+#					return values[-1].p
+#				else:
+#					for i in range(1, len(values)):
+#						if(frameIndex == values[i-1].frameIndex):
+#							return values[i-1].p
+#						elif(frameIndex == values[i].frameIndex):
+#							return values[i].p
+#						elif(values[i-1].frameIndex < frameIndex < values[i].frameIndex):
+#							p0 = values[i-1].p
+#							m0 = values[i-1].m1
+#							p1 = values[i].p
+#							m1 = values[i].m0
+#							t = 1.0 * (frameIndex-values[i-1].frameIndex)/(values[i].frameIndex - values[i-1].frameIndex)
+#							val = (2*t*t*t - 3*t*t + 1)*p0 + (t*t*t - 2*t*t + t)*m0 + (-2*t*t*t + 3*t*t)*p1 + (t*t*t - t*t)*m1
+#							return val
+#						else:
+#							print('[MOT-Error] Record frame outside bounds. boneNumber: %d, recordType: %d, frameIndex: %d, minBound: %d, maxBound: %d' % (self.bone_id, self.recordType, frameIndex, values[i-1].frameIndex, values[i].frameIndex))
+			elif 5 <= self.recordType <= 6: #Type 5/6 --------------------------------------
+				if(frameIndex <= values[0].frameIndex):
 					return self.values_header.p + self.values_header.dp * values[0].cp
-				elif(frameIndex > len(values)):
+				if(frameIndex >= values[-1].frameIndex):
 					return self.values_header.p + self.values_header.dp * values[-1].cp
-				else:
-					for i in range(1, len(values)):
-						if(frameIndex == values[i-1].frameIndex):
-							return self.values_header.p + self.values_header.dp * values[i-1].cp
-						elif(frameIndex == values[i].frameIndex):
-							return self.values_header.p + self.values_header.dp * values[i].cp
-						elif(values[i-1].frameIndex < frameIndex < values[i].frameIndex):
-							p0 = self.values_header.p + self.values_header.dp * values[i-1].cp
-							m0 = self.values_header.m1 + self.values_header.dm1 * values[i-1].cm1
-							p1 = self.values_header.p + self.values_header.dp * values[i].cp
-							m1 = self.values_header.m0 + self.values_header.dm0 * values[i-1].cm0
-							t = 1.0 * (frameIndex - values[i-1].frameIndex)/(values[i].frameIndex - values[i-1].frameIndex)
-							val = (2*t*t*t - 3*t*t + 1)*p0 + (t*t*t - 2*t*t + t)*m0 + (-2*t*t*t + 3*t*t)*p1 + (t*t*t - t*t)*m1
-							return val
-						else:
-							print('[MOT-Error] Record frame outside bounds. boneNumber: %d, recordType: %d, frameIndex: %d, minBound: %d, maxBound: %d' % (self.bone_id, self.recordType, frameIndex, values[i-1].frameIndex, values[i].frameIndex))
-			elif self.recordType == 7:
-				if(frameIndex < 0):
+				
+				p_i = 0
+				for i, value in enumerate(values):
+					if frameIndex < value.frameIndex:
+						p_i = i-1
+						break
+					if frameIndex == value.frameIndex:
+						return self.values_header.p + self.values_header.dp * value.cp
+				
+				k1 = values[p_i]
+				k2 = values[p_i + 1]
+				
+				p0 = self.values_header.p + self.values_header.dp * k1.cp
+				m0 = self.values_header.m1 + self.values_header.dm1 * k1.cm1
+				p1 = self.values_header.p + self.values_header.dp * k2.cp
+				m1 = self.values_header.m0 + self.values_header.dm0 * k1.cm0
+				t = 1.0 * (frameIndex - k1.frameIndex)/(k2.frameIndex - k1.frameIndex)
+				val = (2*t*t*t - 3*t*t + 1)*p0 + (t*t*t - 2*t*t + t)*m0 + (-2*t*t*t + 3*t*t)*p1 + (t*t*t - t*t)*m1
+				return val
+					
+				print('[MOT-Error] Record frame outside bounds. boneNumber: %d, recordType: %d, frameIndex: %d, minBound: %d, maxBound: %d' % (self.bone_id, self.recordType, frameIndex, k1.frameIndex, k2.frameIndex))
+					
+#				if(frameIndex < 0):
+#					return self.values_header.p + self.values_header.dp * values[0].cp
+#				elif(frameIndex > len(values)):
+#					return self.values_header.p + self.values_header.dp * values[-1].cp
+#				else:
+#					for i in range(1, len(values)):
+#						if(frameIndex == values[i-1].frameIndex):
+#							return self.values_header.p + self.values_header.dp * values[i-1].cp
+#						elif(frameIndex == values[i].frameIndex):
+#							return self.values_header.p + self.values_header.dp * values[i].cp
+#						elif(values[i-1].frameIndex < frameIndex < values[i].frameIndex):
+#							p0 = self.values_header.p + self.values_header.dp * values[i-1].cp
+#							m0 = self.values_header.m1 + self.values_header.dm1 * values[i-1].cm1
+#							p1 = self.values_header.p + self.values_header.dp * values[i].cp
+#							m1 = self.values_header.m0 + self.values_header.dm0 * values[i-1].cm0
+#							t = 1.0 * (frameIndex - values[i-1].frameIndex)/(values[i].frameIndex - values[i-1].frameIndex)
+#							val = (2*t*t*t - 3*t*t + 1)*p0 + (t*t*t - 2*t*t + t)*m0 + (-2*t*t*t + 3*t*t)*p1 + (t*t*t - t*t)*m1
+#							return val
+#						else:
+#							print('[MOT-Error] Record frame outside bounds. boneNumber: %d, recordType: %d, frameIndex: %d, minBound: %d, maxBound: %d' % (self.bone_id, self.recordType, frameIndex, values[i-1].frameIndex, values[i].frameIndex))
+			elif self.recordType == 7: #Type 7 --------------------------------------
+				if(frameIndex <= values[0].frameIndex):
 					return self.values_header.p + self.values_header.dp * values[0].cp
-				elif(frameIndex > len(values)):
+				if(frameIndex >= values[-1].frameIndex):
 					return self.values_header.p + self.values_header.dp * values[-1].cp
-				else:
-					for i in range(1, len(values)):
-						if(frameIndex == values[i-1].frameIndex):
-							return self.values_header.p + self.values_header.dp * values[i-1].cp
-						elif(frameIndex == values[i].frameIndex):
-							return self.values_header.p + self.values_header.dp * values[i].cp
-						elif(values[i-1].frameIndex < frameIndex < values[i].frameIndex):
-							p0 = self.values_header.p + self.values_header.dp * values[i-1].cp
-							m0 = self.values_header.m1 + self.values_header.dm1 * values[i-1].cm1
-							p1 = self.values_header.p + self.values_header.dp * values[i].cp
-							m1 = self.values_header.m0 + self.values_header.dm0 * values[i-1].cm0
-							t = 1.0 * (frameIndex - (frameIndex-1))/(((frameIndex-1) + values[i].frameIndex) - (frameIndex-1))
-							val = (2*t*t*t - 3*t*t + 1)*p0 + (t*t*t - 2*t*t + t)*m0 + (-2*t*t*t + 3*t*t)*p1 + (t*t*t - t*t)*m1
-							return val
-						else:
-							print('[MOT-Error] Record frame outside bounds. boneNumber: %d, recordType: %d, frameIndex: %d, minBound: %d, maxBound: %d' % (self.bone_id, self.recordType, frameIndex, values[i-1].frameIndex, values[i].frameIndex))
-			elif self.recordType == 8:
-				if(frameIndex < 0):
+				
+				p_i = 0
+				for i, value in enumerate(values):
+					if frameIndex < value.frameIndex:
+						p_i = i-1
+						break
+					if frameIndex == value.frameIndex:
+						return self.values_header.p + self.values_header.dp * value.cp
+				
+				k1 = values[p_i]
+				k2 = values[p_i + 1]
+				
+				p0 = self.values_header.p + self.values_header.dp * k1.cp
+				m0 = self.values_header.m1 + self.values_header.dm1 * k1.cm1
+				p1 = self.values_header.p + self.values_header.dp * k2.cp
+				m1 = self.values_header.m0 + self.values_header.dm0 * k1.cm0
+				t = 1.0 * (frameIndex - (frameIndex-1))/(((frameIndex-1) + k2.frameIndex) - (frameIndex-1))
+				val = (2*t*t*t - 3*t*t + 1)*p0 + (t*t*t - 2*t*t + t)*m0 + (-2*t*t*t + 3*t*t)*p1 + (t*t*t - t*t)*m1
+				return val
+					
+				print('[MOT-Error] Record frame outside bounds. boneNumber: %d, recordType: %d, frameIndex: %d, minBound: %d, maxBound: %d' % (self.bone_id, self.recordType, frameIndex, k1.frameIndex, k2.frameIndex))
+			
+#				if(frameIndex < 0):
+#					return self.values_header.p + self.values_header.dp * values[0].cp
+#				elif(frameIndex > len(values)):
+#					return self.values_header.p + self.values_header.dp * values[-1].cp
+#				else:
+#					for i in range(1, len(values)):
+#						if(frameIndex == values[i-1].frameIndex):
+#							return self.values_header.p + self.values_header.dp * values[i-1].cp
+#						elif(frameIndex == values[i].frameIndex):
+#							return self.values_header.p + self.values_header.dp * values[i].cp
+#						elif(values[i-1].frameIndex < frameIndex < values[i].frameIndex):
+#							p0 = self.values_header.p + self.values_header.dp * values[i-1].cp
+#							m0 = self.values_header.m1 + self.values_header.dm1 * values[i-1].cm1
+#							p1 = self.values_header.p + self.values_header.dp * values[i].cp
+#							m1 = self.values_header.m0 + self.values_header.dm0 * values[i-1].cm0
+#							t = 1.0 * (frameIndex - (frameIndex-1))/(((frameIndex-1) + values[i].frameIndex) - (frameIndex-1))
+#							val = (2*t*t*t - 3*t*t + 1)*p0 + (t*t*t - 2*t*t + t)*m0 + (-2*t*t*t + 3*t*t)*p1 + (t*t*t - t*t)*m1
+#							return val
+#						else:
+#							print('[MOT-Error] Record frame outside bounds. boneNumber: %d, recordType: %d, frameIndex: %d, minBound: %d, maxBound: %d' % (self.bone_id, self.recordType, frameIndex, values[i-1].frameIndex, values[i].frameIndex))
+			elif self.recordType == 8: #Type 8 --------------------------------------
+				if(frameIndex <= values[0].frameIndex):
 					return self.values_header.p + self.values_header.dp * values[0].cp
-				elif(frameIndex > len(values)):
-					return self.values_header.p + self.values_header.dp * values[1].cp
-				else:
-					for i in range(1, len(values)):
-						if(frameIndex == values[i-1].frameIndex):
-							return self.values_header.p + self.values_header.dp * values[i-1].cp
-						elif(frameIndex == values[i].frameIndex):
-							return self.values_header.p + self.values_header.dp * values[i].cp
-						elif(values[i-1].frameIndex < frameIndex < values[i].frameIndex):
-							p0 = self.values_header.p + self.values_header.dp * values[i-1].cp
-							m0 = self.values_header.m1 + self.values_header.dm1 * values[i-1].cm1
-							p1 = self.values_header.p + self.values_header.dp * values[i].cp
-							m1 = self.values_header.m0 + self.values_header.dm0 * values[i-1].cm0
-							t = 1.0 * (frameIndex - values[i-1].frameIndex)/(values[i].frameIndex - values[i-1].frameIndex)
-							val = (2*t*t*t - 3*t*t + 1)*p0 + (t*t*t - 2*t*t + t)*m0 + (-2*t*t*t + 3*t*t)*p1 + (t*t*t - t*t)*m1
-							return val
-						else:
-							print('[MOT-Error] Record frame outside bounds. boneNumber: %d, recordType: %d, frameIndex: %d, minBound: %d, maxBound: %d' % (self.bone_id, self.recordType, frameIndex, values[i-1].frameIndex, values[i].frameIndex))
+				if(frameIndex >= values[-1].frameIndex):
+					return self.values_header.p + self.values_header.dp * values[-1].cp
+				
+				p_i = 0
+				for i, value in enumerate(values):
+					if frameIndex < value.frameIndex:
+						p_i = i-1
+						break
+					if frameIndex == value.frameIndex:
+						return self.values_header.p + self.values_header.dp * value.cp
+				
+				k1 = values[p_i]
+				k2 = values[p_i + 1]
+				
+				p0 = self.values_header.p + self.values_header.dp * k1.cp
+				m0 = self.values_header.m1 + self.values_header.dm1 * k1.cm1
+				p1 = self.values_header.p + self.values_header.dp * k2.cp
+				m1 = self.values_header.m0 + self.values_header.dm0 * k1.cm0
+				t = 1.0 * (frameIndex - k1.frameIndex)/(k2.frameIndex - k1.frameIndex)
+				val = (2*t*t*t - 3*t*t + 1)*p0 + (t*t*t - 2*t*t + t)*m0 + (-2*t*t*t + 3*t*t)*p1 + (t*t*t - t*t)*m1
+				return val
+					
+				print('[MOT-Error] Record frame outside bounds. boneNumber: %d, recordType: %d, frameIndex: %d, minBound: %d, maxBound: %d' % (self.bone_id, self.recordType, frameIndex, k1.frameIndex, k2.frameIndex))
+			
+#				if(frameIndex < 0):
+#					return self.values_header.p + self.values_header.dp * values[0].cp
+#				elif(frameIndex > len(values)):
+#					return self.values_header.p + self.values_header.dp * values[-1].cp
+#				else:
+#					for i in range(1, len(values)):
+#						if(frameIndex == values[i-1].frameIndex):
+#							return self.values_header.p + self.values_header.dp * values[i-1].cp
+#						elif(frameIndex == values[i].frameIndex):
+#							return self.values_header.p + self.values_header.dp * values[i].cp
+#						elif(values[i-1].frameIndex < frameIndex < values[i].frameIndex):
+#							p0 = self.values_header.p + self.values_header.dp * values[i-1].cp
+#							m0 = self.values_header.m1 + self.values_header.dm1 * values[i-1].cm1
+#							p1 = self.values_header.p + self.values_header.dp * values[i].cp
+#							m1 = self.values_header.m0 + self.values_header.dm0 * values[i-1].cm0
+#							t = 1.0 * (frameIndex - values[i-1].frameIndex)/(values[i].frameIndex - values[i-1].frameIndex)
+#							val = (2*t*t*t - 3*t*t + 1)*p0 + (t*t*t - 2*t*t + t)*m0 + (-2*t*t*t + 3*t*t)*p1 + (t*t*t - t*t)*m1
+#							return val
+#						else:
+#							print('[MOT-Error] Record frame outside bounds. boneNumber: %d, recordType: %d, frameIndex: %d, minBound: %d, maxBound: %d' % (self.bone_id, self.recordType, frameIndex, values[i-1].frameIndex, values[i].frameIndex))
 			else:
 				print('[MOT-Error] Unknown recordType %d at: %d' % self.recordType, self.offset)
 			
