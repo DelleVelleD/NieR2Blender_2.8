@@ -1,3 +1,8 @@
+"""
+import importlib
+import nier2blender_2_80.mot
+importlib.reload(nier2blender_2_80.mot)
+"""
 from nier2blender_2_80.util import *
 
 # interpolates the value at frameIndex between k1 and k2 for recordType 4
@@ -54,16 +59,9 @@ class mot_record(object):
 			elif 2 <= self.recordType <= 3:						# Record Type 2/3
 				if frameIndex < 0:
 					return self.values_header.p + self.values_header.dp * values[0].cp
-				if frameIndex > len(values):
+				if frameIndex >= len(values):
 					return self.values_header.p + self.values_header.dp * values[-1].cp
-				for i, value in enumerate(values):
-					if frameIndex < value.frameIndex:
-						p_i = i - 1
-						break
-					if frameIndex == value.frameIndex:
-						return self.values_header.p + self.values_header.dp * values[frameIndex].cp
-
-				return self.values_header.p + self.values_header.dp * values[p_i].cp
+				return self.values_header.p + self.values_header.dp * values[frameIndex].cp
 			elif self.recordType == 4:							# Record Type 4
 				if frameIndex <= values[0].frameIndex:
 					return values[0].p
